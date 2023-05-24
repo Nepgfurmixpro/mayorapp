@@ -1,4 +1,4 @@
-import { faUser } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faUser, faUserMinus, faUserSlash } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import React, { useContext, useEffect, useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from "react-native";
@@ -7,25 +7,27 @@ import { ParamListBase } from "@react-navigation/native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootParamList } from "../App";
 import Loading from "../components/Loading";
-import { PostInfo } from "../lib/supabase";
-import { DatabaseContext } from "../Contexts";
+import { PostInfo } from "../lib/schemas";
+import { GetPosts } from "../lib/API";
+import { UserContext } from "../Contexts";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function Home({ navigation }: NativeStackScreenProps<RootParamList, 'Home'>) {
     const [loading, setLoading] = useState(false)
     const [posts, setPosts] = useState<PostInfo[]>([])
-    const supabase = useContext(DatabaseContext)
+    const context = useContext(UserContext)
 
     const loadPosts = async () => {
-        let { error, data } = await supabase!.from("posts").select("*").order('id', {
-            ascending: true
-        })
+        setLoading(true)
+        let posts = await GetPosts()
 
-        setPosts(data! as PostInfo[])
+        setPosts(posts)
+        setLoading(false)
     }
 
     useEffect(() => {
         loadPosts()
-    })
+    }, [])
 
     return (
         <View style={styles.container}>
@@ -34,35 +36,46 @@ export default function Home({ navigation }: NativeStackScreenProps<RootParamLis
             </View>
             <View style={styles.body}>
                 <ScrollView onScrollEndDrag={(ev) => {
-                    if (ev.nativeEvent.contentOffset.y <= -200 && !loading) {
-                        setLoading(true)
-                        setTimeout(() => {
-                            setLoading(false)
-                        }, 100)
+                    if (ev.nativeEvent.contentOffset.y <= -150 && !loading) {
+                        loadPosts()
                     }
                 }} style={styles.posts} contentContainerStyle={styles.postsContainer}>
                     <View style={{alignItems: 'center'}}>
-                        <View style={!loading ? {top: -200, position: 'absolute'} : {}}>
+                        <View style={!loading ? {top: -150, position: 'absolute'} : {}}>
                             <Loading size="small" color="#00ffaa" />
                         </View>
                     </View>
-                    {posts.map((v, i) => {
-                        return (
-                            <Post key={i} onPress={() => {
-                                navigation.push('Post', {
-                                    id: i.toString()
-                                })
-                            }} id={""} title="At the Potato Festival!" description="Come meet me here at the potato festival! I will be hanging out there for the day. This is some text to increase the length of the description" />
-                        )
-                    })}
+                    {!loading ? <>
+                        {posts.map((v, i) => {
+                            return (
+                                <Post key={i} onPress={() => {
+                                    navigation.push('Post', {
+                                        id: v.id
+                                    })
+                                }} id={v.id} title={v.title} description={v.description} created={v.time} />
+                            )
+                        })}
+                        {posts.length <= 0 && <Text style={styles.noContent}>Sorry, no content</Text>}
+                    </> : <></>}
                 </ScrollView>
             </View>
             <View style={styles.bottomNav}>
+                {context.user == "" ? <View></View> : <TouchableOpacity
+                    onPress={() => {
+                        AsyncStorage.setItem("@token", "")
+                        context.setUser("")
+                    }}>
+                        <FontAwesomeIcon icon={faUserSlash} size={32} />
+                </TouchableOpacity>}
                 <TouchableOpacity
                     onPress={() => {
-                        alert("User")
+                        if (context.user == "") {
+                            navigation.push("Auth")
+                        } else {
+                            navigation.push("CreatePost")
+                        }
                     }}>
-                        <FontAwesomeIcon icon={faUser} size={32} />
+                        <FontAwesomeIcon icon={context.user == "" ? faUser : faPlus} size={32} />
                 </TouchableOpacity>
             </View>
         </View>
@@ -91,9 +104,10 @@ const styles = StyleSheet.create({
     },
     bottomNav: {
         paddingHorizontal: 32,
-        justifyContent: 'flex-end',
+        justifyContent: 'space-between',
         flexDirection: 'row',
         paddingVertical: 12,
+        alignItems: 'center'
     },
     posts: {
         paddingVertical: 32,
@@ -102,5 +116,9 @@ const styles = StyleSheet.create({
         gap: 10,
         paddingHorizontal: 10,
         paddingBottom: 40
+    },
+    noContent: {
+        textAlign: 'center',
+        fontSize: 20
     }
 })

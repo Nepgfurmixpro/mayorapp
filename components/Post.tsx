@@ -7,6 +7,7 @@ type Props = {
     id: string,
     title: string,
     description: string,
+    created: string,
     onPress: () => void
 }
 
@@ -25,7 +26,7 @@ export default class Post extends React.Component<Props> {
                     <View style={styles.info}>
                         <Text style={styles.title}>{this.props.title}</Text>
                         <Text>{this.props.description.slice(0, 120).trim()}{this.props.description.length > 120 ? "..." : ""}</Text>
-                        <Text style={styles.location}>Location: Waterfront</Text>
+                        <Text style={styles.location}>Created: {new Date(this.props.created).toLocaleString()}</Text>
                     </View>
                 </View>
             </TouchableHighlight>

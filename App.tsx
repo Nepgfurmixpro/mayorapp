@@ -4,27 +4,45 @@ import Home from './pages/Home';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator as createStackNavigator } from '@react-navigation/native-stack';
 import PagePost, { PagePostProps } from './pages/PagePost';
-import { UserContext, DatabaseContext } from './Contexts';
+import { UserContext } from './Contexts';
 import { createClient } from '@supabase/supabase-js';
+import Auth from './pages/Auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useEffect, useState } from 'react';
+import { ValidateAuthToken } from './lib/API';
+import CreatePost from './components/CreatePost';
 
 export type RootParamList = {
   Home: undefined,
-  Post: PagePostProps
+  Post: PagePostProps,
+  Auth: undefined,
+  CreatePost: undefined
 }
 
 const Stack = createStackNavigator<RootParamList>();
 
 export default function App() {
-  const SUPABASE_URL = process.env.SUPABASE_URL || 'https://xpzwoocajtvcmkejafis.supabase.co'
-  const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhwendvb2NhanR2Y21rZWphZmlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE2ODQ4NjQ5NjksImV4cCI6MjAwMDQ0MDk2OX0.sXT-cd6-A8v9sTdjFspbJG0LIKAUuDV7-IqVNMaAofI'
-  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    
-  })
+  const [storageToken, setStorageToken] = useState('')
+
+  const loadStorage = async () => {
+    let temp = await AsyncStorage.getItem("@token")
+    let res = await ValidateAuthToken(temp ?? "")
+    if (res.ok) {
+      setStorageToken(temp!)
+    }
+  }
+
+  useEffect(() => {
+    loadStorage()
+  }, [])
+
   return (
     <NavigationContainer>
       <SafeAreaView style={styles.container}>
-        <DatabaseContext.Provider value={supabase}>
-          <UserContext.Provider value=''>
+          <UserContext.Provider value={{
+            user: storageToken,
+            setUser: setStorageToken
+          }}>
             <Stack.Navigator>
               <Stack.Screen options={{
                 headerShown: false,
@@ -35,9 +53,14 @@ export default function App() {
               <Stack.Screen name="Post" component={PagePost} initialParams={{
                 id: ''
               }} />
+              <Stack.Screen name="Auth" component={Auth} options={{
+                title: "Login"
+              }} />
+              <Stack.Screen name="CreatePost" component={CreatePost} options={{
+                title: "Create a new Post!"
+              }} />
             </Stack.Navigator>
           </UserContext.Provider>
-        </DatabaseContext.Provider>
         <StatusBar style="auto" />
       </SafeAreaView>
     </NavigationContainer>
