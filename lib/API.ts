@@ -1,7 +1,7 @@
 import { PostInfo } from "./schemas";
 
 const BASE_URL = "http://10.0.67.96:8080"
-const GOOGLE_MAPS_API= "AIzaSyAp8YyCVCuk3-699x23jyW-nWO6825LxSM"
+const GOOGLE_MAPS_API= "******"
 
 const GetPosts = async (): Promise<PostInfo[]> => {
     let res = await (await fetch(`${BASE_URL}/api/posts`)).json()
